@@ -76,15 +76,15 @@
         
         .scan-display {
             width: 100%;
-            padding: 20px;
-            font-size: 24px;
-            border: 3px solid #e0e0e0;
-            border-radius: 10px;
+            padding: 12px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
             text-align: center;
-            font-weight: 600;
+            font-weight: 500;
             background: #f8f9fa;
             color: #666;
-            min-height: 70px;
+            min-height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -400,32 +400,28 @@
             setTimeout(forceFocus, 10);
         });
         
-        // Simulate user interaction to bypass iOS restrictions
-        function simulateUserInteraction() {
-            // Create and dispatch a synthetic touchstart event
-            const touchEvent = new TouchEvent('touchstart', {
-                bubbles: true,
-                cancelable: true,
-                view: window
-            });
-            scanInput.dispatchEvent(touchEvent);
-            
-            // Follow with focus
+        // Auto-refresh mechanism to trigger focus (works on initial load)
+        const hasRefreshed = sessionStorage.getItem('hasRefreshed');
+        if (!hasRefreshed) {
+            sessionStorage.setItem('hasRefreshed', 'true');
+            // Refresh after a brief moment to allow page to register
+            setTimeout(() => {
+                window.location.reload();
+            }, 100);
+        } else {
+            // On the refreshed load, aggressively focus
             forceFocus();
+            refocusInput();
+            
+            // Multiple focus attempts
+            setTimeout(forceFocus, 50);
+            setTimeout(forceFocus, 100);
+            setTimeout(forceFocus, 200);
+            setTimeout(forceFocus, 500);
+            setTimeout(forceFocus, 1000);
         }
         
-        // Try to focus immediately and repeatedly
-        forceFocus();
-        refocusInput();
-        
-        // Multiple attempts with increasing delays
-        setTimeout(simulateUserInteraction, 100);
-        setTimeout(forceFocus, 200);
-        setTimeout(simulateUserInteraction, 300);
-        setTimeout(forceFocus, 500);
-        setTimeout(forceFocus, 1000);
-        
-        // Listen for any user interaction and immediately focus
+        // Listen for any user interaction (tap/touch anywhere) and immediately focus
         let hasInteracted = false;
         const oneTimeFocus = () => {
             if (!hasInteracted) {
@@ -438,6 +434,10 @@
         document.addEventListener('touchstart', oneTimeFocus, { once: true });
         document.addEventListener('click', oneTimeFocus, { once: true });
         document.addEventListener('keydown', oneTimeFocus, { once: true });
+        
+        // Make entire page tappable to focus (silently)
+        document.body.addEventListener('touchstart', forceFocus);
+        document.body.addEventListener('click', forceFocus);
     </script>
 </body>
 </html>
