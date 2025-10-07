@@ -182,11 +182,38 @@
         const scanInput = document.getElementById('scanInput');
         const statusDiv = document.getElementById('status');
         const memberInfoDiv = document.getElementById('memberInfo');
+        
+        let inputTimeout = null;
 
-        // Simple Enter key handler
+        // Auto-submit when scanner finishes typing
+        scanInput.addEventListener('input', (e) => {
+            // Clear previous timeout
+            if (inputTimeout) {
+                clearTimeout(inputTimeout);
+            }
+            
+            // Set new timeout - if no more input for 150ms, assume scan is complete
+            inputTimeout = setTimeout(async () => {
+                const scannedData = scanInput.value.trim();
+                
+                if (scannedData && scannedData.length >= 2) {
+                    await checkMembership(scannedData);
+                    scanInput.value = '';
+                    scanInput.focus();
+                }
+            }, 150);
+        });
+
+        // Also handle manual Enter key press
         scanInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
+                
+                // Clear the auto-submit timeout
+                if (inputTimeout) {
+                    clearTimeout(inputTimeout);
+                }
+                
                 const scannedData = scanInput.value.trim();
                 
                 if (!scannedData) {
