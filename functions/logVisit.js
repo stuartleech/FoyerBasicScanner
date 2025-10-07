@@ -40,7 +40,7 @@ exports.handler = async (event) => {
     const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     
     const activityData = {
-      type: 'Visit',
+      type: ['Visit'],
       content: 'Annual pass scanned at FOH',
       date: currentDate,
       related_entity_ids: [personId]
