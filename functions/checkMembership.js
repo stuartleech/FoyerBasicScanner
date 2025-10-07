@@ -50,19 +50,20 @@ exports.handler = async (event) => {
     const membershipData = await makeBeaconRequest(filterUrl, 'POST', filterBody);
 
     console.log('Membership search results:', JSON.stringify(membershipData, null, 2));
-    console.log('Number of results found:', membershipData?.entities?.length || 0);
+    console.log('Number of results found:', membershipData?.results?.length || 0);
 
     // Check if we found a membership
-    if (membershipData && membershipData.entities && membershipData.entities.length > 0) {
-      const membership = membershipData.entities[0];
+    if (membershipData && membershipData.results && membershipData.results.length > 0) {
+      const result = membershipData.results[0];
+      const membership = result.entity;
       
       // Extract member info from the membership
       let memberName = 'N/A';
       let memberEmail = 'N/A';
       
       // Check if there are references (member details)
-      if (membershipData.references && membershipData.references.length > 0) {
-        const person = membershipData.references.find(ref => ref.entity_type === 'person');
+      if (result.references && result.references.length > 0) {
+        const person = result.references.find(ref => ref.entity && ref.entity.name);
         if (person && person.entity) {
           const nameObj = person.entity.name;
           if (nameObj) {
@@ -75,7 +76,7 @@ exports.handler = async (event) => {
       }
       
       // Check if membership is active
-      const status = membership.entity.status || [];
+      const status = membership.status || [];
       const isActive = status.includes('Active');
       
       return {
@@ -88,7 +89,7 @@ exports.handler = async (event) => {
           member: {
             name: memberName,
             email: memberEmail,
-            membershipNumber: membership.entity.member_number,
+            membershipNumber: membership.member_number,
             active: isActive
           }
         })
