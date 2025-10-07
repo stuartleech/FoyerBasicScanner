@@ -211,38 +211,38 @@
 
         // Extract membership number from various QR code formats
         async function extractMembershipNumber(scannedData) {
-            // Check if it's a me-qr shortcode that needs to be resolved
-            if (scannedData.includes('me-qr.com/')) {
+            // Check if it's a me-qr shortcode or URL that needs server-side resolution
+            if (scannedData.includes('me-qr.com/') || scannedData.includes('MembershipNumber=')) {
                 try {
-                    // Follow the redirect to get the actual URL
-                    const response = await fetch(scannedData, { 
-                        method: 'HEAD', 
-                        redirect: 'follow' 
+                    // Send to server to resolve URL and extract membership number
+                    const response = await fetch('/.netlify/functions/extractMembership', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ scannedData })
                     });
-                    const resolvedUrl = response.url;
                     
-                    // Now check if the resolved URL has MembershipNumber parameter
-                    if (resolvedUrl.includes('MembershipNumber=')) {
-                        const match = resolvedUrl.match(/MembershipNumber=(\d+)/);
-                        if (match) {
-                            return match[1]; // Return the membership number
-                        }
+                    const result = await response.json();
+                    
+                    if (response.ok && result.membershipNumber) {
+                        return result.membershipNumber;
+                    } else {
+                        throw new Error(result.error || 'Failed to extract membership number');
                     }
                 } catch (error) {
-                    console.error('Error resolving me-qr URL:', error);
-                    // Fall back to original data if resolution fails
-                    return scannedData;
+                    console.error('Error resolving URL:', error);
+                    // Fall back to simple extraction
+                    return extractMembershipNumberSimple(scannedData);
                 }
             }
             
-            // Check if it's a Zapier webhook URL with MembershipNumber parameter
-            if (scannedData.includes('MembershipNumber=')) {
-                const match = scannedData.match(/MembershipNumber=(\d+)/);
-                if (match) {
-                    return match[1]; // Return the membership number
-                }
-            }
-            
+            // For simple cases, use local extraction
+            return extractMembershipNumberSimple(scannedData);
+        }
+        
+        // Simple local extraction for non-URL cases
+        function extractMembershipNumberSimple(scannedData) {
             // Check if it's a simple membership number
             if (/^\d+$/.test(scannedData)) {
                 return scannedData;
