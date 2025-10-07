@@ -209,6 +209,40 @@
         let inputTimeout = null;
         let currentMember = null; // Store current member for logging visits
 
+        // Extract membership number from various QR code formats
+        function extractMembershipNumber(scannedData) {
+            // Check if it's a Zapier webhook URL with MembershipNumber parameter
+            if (scannedData.includes('MembershipNumber=')) {
+                const match = scannedData.match(/MembershipNumber=(\d+)/);
+                if (match) {
+                    return match[1]; // Return the membership number
+                }
+            }
+            
+            // Check if it's a simple membership number
+            if (/^\d+$/.test(scannedData)) {
+                return scannedData;
+            }
+            
+            // Check for other common patterns (pass_123, membership_456, etc.)
+            const patterns = [
+                /pass[_-]?(\d+)/i,
+                /membership[_-]?(\d+)/i,
+                /annual[_-]?pass[_-]?(\d+)/i,
+                /foundling[_-]?(\d+)/i
+            ];
+            
+            for (const pattern of patterns) {
+                const match = scannedData.match(pattern);
+                if (match) {
+                    return match[1];
+                }
+            }
+            
+            // If no pattern matches, return the original data
+            return scannedData;
+        }
+
         // Auto-submit when scanner finishes typing
         scanInput.addEventListener('input', (e) => {
             // Clear previous timeout
@@ -221,7 +255,8 @@
                 const scannedData = scanInput.value.trim();
                 
                 if (scannedData && scannedData.length >= 2) {
-                    await checkMembership(scannedData);
+                    const membershipNumber = extractMembershipNumber(scannedData);
+                    await checkMembership(membershipNumber);
                     scanInput.value = '';
                     scanInput.focus();
                 }
@@ -245,7 +280,8 @@
                     return;
                 }
 
-                await checkMembership(scannedData);
+                const membershipNumber = extractMembershipNumber(scannedData);
+                await checkMembership(membershipNumber);
                 scanInput.value = '';
                 scanInput.focus();
             }
