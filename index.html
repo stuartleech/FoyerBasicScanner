@@ -162,7 +162,12 @@
 
         // Auto-focus input when page loads or after showing results
         function refocusInput() {
-            setTimeout(() => scanInput.focus(), 100);
+            setTimeout(() => {
+                scanInput.focus();
+                scanInput.click();
+                // Force cursor to end of input
+                scanInput.setSelectionRange(scanInput.value.length, scanInput.value.length);
+            }, 50);
         }
 
         scanInput.addEventListener('keypress', async (e) => {
@@ -250,15 +255,28 @@
         }
 
         // Keep focus on input at all times
-        document.addEventListener('click', refocusInput);
+        document.addEventListener('click', () => {
+            if (document.activeElement !== scanInput) {
+                refocusInput();
+            }
+        });
+        
         window.addEventListener('load', refocusInput);
+        
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 refocusInput();
             }
         });
         
-        // Initial focus on page load
+        // Refocus if input loses focus
+        scanInput.addEventListener('blur', () => {
+            refocusInput();
+        });
+        
+        // Initial focus on page load - do it immediately AND with delay
+        scanInput.focus();
+        scanInput.click();
         refocusInput();
     </script>
 </body>
