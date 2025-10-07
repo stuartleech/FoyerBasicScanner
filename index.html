@@ -67,22 +67,34 @@
         }
         
         #scanInput {
+            position: absolute;
+            left: -9999px;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+        }
+        
+        .scan-display {
             width: 100%;
             padding: 20px;
             font-size: 24px;
-            border: 3px solid #FF1459;
+            border: 3px solid #e0e0e0;
             border-radius: 10px;
-            transition: all 0.3s;
             text-align: center;
             font-weight: 600;
-            background: #fff;
+            background: #f8f9fa;
+            color: #666;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
         }
         
-        #scanInput:focus {
-            outline: none;
+        .scan-display.active {
             border-color: #FF1459;
-            box-shadow: 0 0 0 4px rgba(255, 20, 89, 0.2);
             background: #fffbfc;
+            color: #000;
         }
         
         .status {
@@ -173,7 +185,8 @@
         
         <div class="scan-section">
             <label for="scanInput">Scan Membership Barcode/QR Code:</label>
-            <input type="text" id="scanInput" autofocus placeholder="Ready to scan..." inputmode="none">
+            <div class="scan-display" id="scanDisplay">Ready to scan...</div>
+            <input type="text" id="scanInput" autofocus inputmode="none" aria-hidden="true">
         </div>
         
         <div id="status" class="status"></div>
@@ -183,6 +196,7 @@
 
     <script>
         const scanInput = document.getElementById('scanInput');
+        const scanDisplay = document.getElementById('scanDisplay');
         const statusDiv = document.getElementById('status');
         const memberInfoDiv = document.getElementById('memberInfo');
 
@@ -230,14 +244,17 @@
                 const scannedData = (scanBuffer || scanInput.value).trim();
                 
                 if (scannedData) {
-                    // Update visual input to show what was scanned
-                    scanInput.value = scannedData;
+                    // Update visual display
+                    scanDisplay.textContent = scannedData;
+                    scanDisplay.classList.add('active');
                     
                     await checkMembership(scannedData);
                     
                     // Clear everything
                     scanBuffer = '';
                     scanInput.value = '';
+                    scanDisplay.textContent = 'Ready to scan...';
+                    scanDisplay.classList.remove('active');
                     refocusInput();
                 } else {
                     showStatus('Please scan a valid barcode or QR code', 'error');
@@ -250,15 +267,19 @@
                 // Add to buffer
                 scanBuffer += e.key;
                 
-                // Also update the input field visually
-                if (document.activeElement !== scanInput) {
-                    scanInput.value = scanBuffer;
-                    refocusInput();
-                }
+                // Update visual display
+                scanDisplay.textContent = scanBuffer || 'Scanning...';
+                scanDisplay.classList.add('active');
+                
+                // Also update the hidden input field
+                scanInput.value = scanBuffer;
+                refocusInput();
                 
                 // Clear buffer after 100ms of no input (in case of manual typing)
                 scanTimeout = setTimeout(() => {
                     scanBuffer = '';
+                    scanDisplay.textContent = 'Ready to scan...';
+                    scanDisplay.classList.remove('active');
                 }, 100);
             }
         });
