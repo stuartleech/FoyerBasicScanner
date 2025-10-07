@@ -180,6 +180,10 @@
         const statusDiv = document.getElementById('status');
         const memberInfoDiv = document.getElementById('memberInfo');
 
+        // Buffer to capture scanner input even when field not focused
+        let scanBuffer = '';
+        let scanTimeout = null;
+
         // Auto-focus input when page loads or after showing results
         function refocusInput() {
             // Try multiple times with different delays for stubborn browsers (like Shopify POS)
@@ -198,37 +202,66 @@
             setTimeout(attemptFocus, 200);
         }
 
-        // Capture ALL keyboard input and redirect to the input field
-        // This is crucial for Shopify POS browser where focus doesn't work reliably
-        document.addEventListener('keydown', (e) => {
-            // If input is not focused and user types anything, focus it
-            if (document.activeElement !== scanInput) {
-                // For Tab key, just focus without adding the character
-                if (e.key === 'Tab') {
-                    e.preventDefault();
+        // GLOBAL keyboard capture for scanner - works even without focus!
+        document.addEventListener('keydown', async (e) => {
+            // Clear timeout on any key press
+            if (scanTimeout) {
+                clearTimeout(scanTimeout);
+            }
+
+            // Handle Tab (often scanner prefix) - just ignore it
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                refocusInput();
+                return;
+            }
+
+            // Handle Enter - process the scan
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                
+                // Get data from buffer OR from input field
+                const scannedData = (scanBuffer || scanInput.value).trim();
+                
+                if (scannedData) {
+                    // Update visual input to show what was scanned
+                    scanInput.value = scannedData;
+                    
+                    await checkMembership(scannedData);
+                    
+                    // Clear everything
+                    scanBuffer = '';
+                    scanInput.value = '';
+                    refocusInput();
+                } else {
+                    showStatus('Please scan a valid barcode or QR code', 'error');
+                }
+                return;
+            }
+
+            // Capture printable characters
+            if (e.key.length === 1) {
+                // Add to buffer
+                scanBuffer += e.key;
+                
+                // Also update the input field visually
+                if (document.activeElement !== scanInput) {
+                    scanInput.value = scanBuffer;
                     refocusInput();
                 }
-                // For any printable character or number, focus and let it type
-                else if (e.key.length === 1 || e.key === 'Enter') {
-                    scanInput.focus();
-                    // Don't prevent default - let the character go through to the now-focused input
-                }
+                
+                // Clear buffer after 100ms of no input (in case of manual typing)
+                scanTimeout = setTimeout(() => {
+                    scanBuffer = '';
+                }, 100);
             }
         });
         
+        // Also listen on the input directly for when it IS focused
         scanInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                const scannedData = scanInput.value.trim();
-                
-                if (!scannedData) {
-                    showStatus('Please scan a valid barcode or QR code', 'error');
-                    return;
-                }
-
-                await checkMembership(scannedData);
-                scanInput.value = '';
-                refocusInput();
+                scanBuffer = scanInput.value; // Sync buffer with input
             }
         });
 
