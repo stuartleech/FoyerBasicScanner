@@ -34,15 +34,6 @@
             cursor: pointer;
         }
         
-        .tap-hint {
-            text-align: center;
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 20px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
         
         .logo-section {
             text-align: center;
@@ -180,13 +171,9 @@
             <h1>Scanner</h1>
         </div>
         
-        <div class="tap-hint">
-            👆 Tap anywhere on this screen before scanning
-        </div>
-        
         <div class="scan-section">
             <label for="scanInput">Scan Membership Barcode/QR Code:</label>
-            <input type="text" id="scanInput" autofocus placeholder="Tap here then scan..." inputmode="none">
+            <input type="text" id="scanInput" autofocus placeholder="Ready to scan..." inputmode="none">
         </div>
         
         <div id="status" class="status"></div>
@@ -392,12 +379,44 @@
             setTimeout(forceFocus, 10);
         });
         
-        // Initial focus on page load - aggressive approach for iPad
-        setTimeout(forceFocus, 100);
-        setTimeout(forceFocus, 300);
-        setTimeout(forceFocus, 500);
+        // Simulate user interaction to bypass iOS restrictions
+        function simulateUserInteraction() {
+            // Create and dispatch a synthetic touchstart event
+            const touchEvent = new TouchEvent('touchstart', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+            scanInput.dispatchEvent(touchEvent);
+            
+            // Follow with focus
+            forceFocus();
+        }
+        
+        // Try to focus immediately and repeatedly
         forceFocus();
         refocusInput();
+        
+        // Multiple attempts with increasing delays
+        setTimeout(simulateUserInteraction, 100);
+        setTimeout(forceFocus, 200);
+        setTimeout(simulateUserInteraction, 300);
+        setTimeout(forceFocus, 500);
+        setTimeout(forceFocus, 1000);
+        
+        // Listen for any user interaction and immediately focus
+        let hasInteracted = false;
+        const oneTimeFocus = () => {
+            if (!hasInteracted) {
+                hasInteracted = true;
+                forceFocus();
+            }
+        };
+        
+        // Capture the very first interaction
+        document.addEventListener('touchstart', oneTimeFocus, { once: true });
+        document.addEventListener('click', oneTimeFocus, { once: true });
+        document.addEventListener('keydown', oneTimeFocus, { once: true });
     </script>
 </body>
 </html>
