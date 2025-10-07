@@ -49,6 +49,9 @@ exports.handler = async (event) => {
 
     const membershipData = await makeBeaconRequest(filterUrl, 'POST', filterBody);
 
+    console.log('Membership search results:', JSON.stringify(membershipData, null, 2));
+    console.log('Number of results found:', membershipData?.entities?.length || 0);
+
     // Check if we found a membership
     if (membershipData && membershipData.entities && membershipData.entities.length > 0) {
       const membership = membershipData.entities[0];
