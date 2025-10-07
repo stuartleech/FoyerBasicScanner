@@ -67,40 +67,18 @@
         }
         
         #scanInput {
-            position: absolute;
-            left: -9999px;
-            width: 1px;
-            height: 1px;
-            opacity: 0;
-        }
-        
-        .scan-display {
             width: 100%;
-            padding: 12px;
+            padding: 15px;
             font-size: 18px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             text-align: center;
             font-weight: 500;
-            background: #f8f9fa;
-            color: #666;
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
         }
         
-        .scan-display.focused {
+        #scanInput:focus {
+            outline: none;
             border-color: #FF1459;
-            box-shadow: 0 0 0 3px rgba(255, 20, 89, 0.2);
-            background: #fff;
-        }
-        
-        .scan-display.active {
-            border-color: #FF1459;
-            background: #fffbfc;
-            color: #000;
             box-shadow: 0 0 0 3px rgba(255, 20, 89, 0.2);
         }
         
@@ -192,8 +170,7 @@
         
         <div class="scan-section">
             <label for="scanInput">Scan Membership Barcode/QR Code:</label>
-            <div class="scan-display" id="scanDisplay">Ready to scan...</div>
-            <input type="text" id="scanInput" autofocus inputmode="none" aria-hidden="true">
+            <input type="text" id="scanInput" autofocus placeholder="Ready to scan...">
         </div>
         
         <div id="status" class="status"></div>
@@ -203,103 +180,23 @@
 
     <script>
         const scanInput = document.getElementById('scanInput');
-        const scanDisplay = document.getElementById('scanDisplay');
         const statusDiv = document.getElementById('status');
         const memberInfoDiv = document.getElementById('memberInfo');
 
-        // Buffer to capture scanner input even when field not focused
-        let scanBuffer = '';
-        let scanTimeout = null;
-
-        // Auto-focus input when page loads or after showing results
-        function refocusInput() {
-            // Try multiple times with different delays for stubborn browsers (like Shopify POS)
-            const attemptFocus = () => {
-                scanInput.focus();
-                scanInput.click();
-                // Force cursor to end of input
-                if (scanInput.value) {
-                    scanInput.setSelectionRange(scanInput.value.length, scanInput.value.length);
-                }
-            };
-            
-            attemptFocus();
-            setTimeout(attemptFocus, 50);
-            setTimeout(attemptFocus, 100);
-            setTimeout(attemptFocus, 200);
-        }
-
-        // GLOBAL keyboard capture for scanner - works even without focus!
-        document.addEventListener('keydown', async (e) => {
-            // Clear timeout on any key press
-            if (scanTimeout) {
-                clearTimeout(scanTimeout);
-            }
-
-            // Handle Tab (often scanner prefix) - focus and continue
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                console.log('Tab key detected - focusing input');
-                forceFocus();
-                refocusInput();
-                return;
-            }
-
-            // Handle Enter - process the scan
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                
-                // Get data from buffer OR from input field
-                const scannedData = (scanBuffer || scanInput.value).trim();
-                
-                if (scannedData) {
-                    // Update visual display
-                    scanDisplay.textContent = scannedData;
-                    scanDisplay.classList.add('active');
-                    
-                    await checkMembership(scannedData);
-                    
-                    // Clear everything
-                    scanBuffer = '';
-                    scanInput.value = '';
-                    scanDisplay.textContent = 'Ready to scan...';
-                    scanDisplay.classList.remove('active');
-                    refocusInput();
-                } else {
-                    showStatus('Please scan a valid barcode or QR code', 'error');
-                }
-                return;
-            }
-
-            // Capture printable characters
-            if (e.key.length === 1) {
-                // Add to buffer
-                scanBuffer += e.key;
-                console.log('Captured character:', e.key, '| Buffer:', scanBuffer);
-                
-                // Update visual display
-                scanDisplay.textContent = scanBuffer || 'Scanning...';
-                scanDisplay.classList.add('active');
-                
-                // Also update the hidden input field
-                scanInput.value = scanBuffer;
-                refocusInput();
-                
-                // Clear buffer after 100ms of no input (in case of manual typing)
-                scanTimeout = setTimeout(() => {
-                    console.log('Buffer timeout - clearing');
-                    scanBuffer = '';
-                    scanDisplay.textContent = 'Ready to scan...';
-                    scanDisplay.classList.remove('active');
-                }, 100);
-            }
-        });
-        
-        // Also listen on the input directly for when it IS focused
+        // Simple Enter key handler
         scanInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                scanBuffer = scanInput.value; // Sync buffer with input
+                const scannedData = scanInput.value.trim();
+                
+                if (!scannedData) {
+                    showStatus('Please scan a valid barcode or QR code', 'error');
+                    return;
+                }
+
+                await checkMembership(scannedData);
+                scanInput.value = '';
+                scanInput.focus();
             }
         });
 
@@ -371,110 +268,9 @@
             }
         }
 
-        // Make entire container clickable to focus input (crucial for iPad/Safari)
-        const container = document.getElementById('mainContainer');
-        
-        function forceFocus() {
-            scanInput.focus();
-            scanInput.click();
-            // Show pink outline when focused
-            scanDisplay.classList.add('focused');
-            // On iOS Safari, sometimes we need to force selection
-            setTimeout(() => {
-                scanInput.setSelectionRange(0, scanInput.value.length);
-            }, 10);
-        }
-        
-        // Monitor focus state and update visual display
-        scanInput.addEventListener('focus', () => {
-            scanDisplay.classList.add('focused');
-            console.log('Input focused!');
-        });
-        
-        scanInput.addEventListener('blur', () => {
-            if (!scanBuffer) {
-                scanDisplay.classList.remove('focused');
-            }
-            console.log('Input blurred');
-        });
-        
-        // Multiple event listeners for maximum compatibility
-        container.addEventListener('click', forceFocus);
-        container.addEventListener('touchstart', forceFocus);
-        container.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            forceFocus();
-        });
-        
-        document.addEventListener('click', forceFocus);
-        document.addEventListener('touchstart', forceFocus);
-        
-        window.addEventListener('load', () => {
-            forceFocus();
-            refocusInput();
-        });
-        
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                forceFocus();
-                refocusInput();
-            }
-        });
-        
-        // Refocus if input loses focus
-        scanInput.addEventListener('blur', () => {
-            setTimeout(forceFocus, 10);
-        });
-        
-        // Auto-refresh mechanism to trigger focus (works on initial load)
-        // Use a timestamp to detect if this is a fresh load or a refresh
-        const lastLoadTime = localStorage.getItem('lastLoadTime');
-        const currentTime = Date.now();
-        
-        console.log('Page load detected');
-        
-        // If no last load time, or last load was more than 5 seconds ago, do a refresh
-        if (!lastLoadTime || (currentTime - parseInt(lastLoadTime)) > 5000) {
-            console.log('First load - will auto-refresh');
-            localStorage.setItem('lastLoadTime', currentTime.toString());
-            // Refresh after a brief moment
-            setTimeout(() => {
-                console.log('Auto-refreshing now...');
-                window.location.reload();
-            }, 200);
-        } else {
-            console.log('Post-refresh load - attempting focus');
-            // On the refreshed load, aggressively focus
-            forceFocus();
-            refocusInput();
-            
-            // Multiple focus attempts
-            setTimeout(forceFocus, 50);
-            setTimeout(forceFocus, 100);
-            setTimeout(forceFocus, 200);
-            setTimeout(forceFocus, 500);
-            setTimeout(forceFocus, 1000);
-            
-            console.log('Focus attempts scheduled');
-        }
-        
-        // Listen for any user interaction (tap/touch anywhere) and immediately focus
-        let hasInteracted = false;
-        const oneTimeFocus = () => {
-            if (!hasInteracted) {
-                hasInteracted = true;
-                forceFocus();
-            }
-        };
-        
-        // Capture the very first interaction
-        document.addEventListener('touchstart', oneTimeFocus, { once: true });
-        document.addEventListener('click', oneTimeFocus, { once: true });
-        document.addEventListener('keydown', oneTimeFocus, { once: true });
-        
-        // Make entire page tappable to focus (silently)
-        document.body.addEventListener('touchstart', forceFocus);
-        document.body.addEventListener('click', forceFocus);
+        // Keep input focused
+        document.addEventListener('click', () => scanInput.focus());
+        scanInput.focus();
     </script>
 </body>
 </html>
