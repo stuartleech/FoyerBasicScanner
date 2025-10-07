@@ -104,7 +104,7 @@ function makeBeaconRequest(url) {
       headers: {
         'Authorization': `Bearer ${BEACON_API_KEY}`,
         'Content-Type': 'application/json',
-        'Beacon-Application': 'FoyerScanner/1.0'
+        'Beacon-Application': 'developer_api'
       }
     };
 
