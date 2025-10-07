@@ -249,8 +249,16 @@
             }
         }
 
-        // Keep focus on input
+        // Keep focus on input at all times
         document.addEventListener('click', refocusInput);
+        window.addEventListener('load', refocusInput);
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                refocusInput();
+            }
+        });
+        
+        // Initial focus on page load
         refocusInput();
     </script>
 </body>
