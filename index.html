@@ -159,6 +159,29 @@
             background: #A71459;
             color: white;
         }
+        
+        .log-visit-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            background: #FF1459;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .log-visit-btn:hover {
+            background: #e01050;
+        }
+        
+        .log-visit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -184,6 +207,7 @@
         const memberInfoDiv = document.getElementById('memberInfo');
         
         let inputTimeout = null;
+        let currentMember = null; // Store current member for logging visits
 
         // Auto-submit when scanner finishes typing
         scanInput.addEventListener('input', (e) => {
@@ -247,9 +271,11 @@
                 }
 
                 if (result.member) {
+                    currentMember = result.member; // Store for visit logging
                     displayMemberInfo(result.member);
                     showStatus('✓ Member found!', 'success');
                 } else {
+                    currentMember = null;
                     showStatus('❌ No active membership found', 'error');
                 }
             } catch (error) {
@@ -280,8 +306,53 @@
                     <span class="info-label">Membership #:</span>
                     <span class="info-value">${member.membershipNumber || 'N/A'}</span>
                 </div>
+                <button class="log-visit-btn" onclick="logVisit()">Log Visit in Beacon CRM</button>
             `;
             memberInfoDiv.classList.add('show');
+        }
+        
+        async function logVisit() {
+            if (!currentMember || !currentMember.personId) {
+                showStatus('❌ No member to log visit for', 'error');
+                return;
+            }
+            
+            const button = document.querySelector('.log-visit-btn');
+            button.disabled = true;
+            button.textContent = 'Logging visit...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/logVisit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        personId: currentMember.personId 
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to log visit');
+                }
+
+                showStatus('✓ Visit logged successfully!', 'success');
+                button.textContent = '✓ Visit Logged';
+                
+                // Re-enable button after 2 seconds
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.textContent = 'Log Visit in Beacon CRM';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('❌ Error: ' + error.message, 'error');
+                button.disabled = false;
+                button.textContent = 'Log Visit in Beacon CRM';
+            }
         }
 
         function showStatus(message, type) {

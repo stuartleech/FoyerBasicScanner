@@ -26,62 +26,29 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { scannedData } = JSON.parse(event.body);
+    const { personId } = JSON.parse(event.body);
 
-    if (!scannedData) {
+    if (!personId) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'No scanned data provided' })
+        body: JSON.stringify({ error: 'Person ID is required' })
       };
     }
 
-    // Filter memberships by member_number
-    const filterUrl = `https://api.beaconcrm.org/v1/account/${BEACON_ACCOUNT_ID}/entities/membership/filter`;
-    const filterBody = {
-      filter_conditions: [
-        {
-          field: "member_number",
-          operator: "==",
-          value: parseInt(scannedData) || scannedData
-        }
-      ]
+    // Create Activity record
+    const activityUrl = `https://api.beaconcrm.org/v1/account/${BEACON_ACCOUNT_ID}/entity/activity`;
+    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    const activityData = {
+      type: 'Visit',
+      content: 'Annual pass scanned at FOH',
+      date: currentDate,
+      related_entity_ids: [personId]
     };
 
-    const membershipData = await makeBeaconRequest(filterUrl, 'POST', filterBody);
+    const result = await makeBeaconRequest(activityUrl, 'POST', activityData);
 
-    console.log('Membership search results:', JSON.stringify(membershipData, null, 2));
-    console.log('Number of results found:', membershipData?.results?.length || 0);
-
-    // Check if we found a membership
-    if (membershipData && membershipData.results && membershipData.results.length > 0) {
-      const result = membershipData.results[0];
-      const membership = result.entity;
-      
-      // Extract member info from the membership
-      let memberName = 'N/A';
-      let memberEmail = 'N/A';
-      
-      // Check if there are references (member details)
-      if (result.references && result.references.length > 0) {
-        const person = result.references.find(ref => ref.entity && ref.entity.name);
-        if (person && person.entity) {
-          const nameObj = person.entity.name;
-          if (nameObj) {
-            memberName = nameObj.full || `${nameObj.first || ''} ${nameObj.last || ''}`.trim();
-          }
-          if (person.entity.emails && person.entity.emails.length > 0) {
-            memberEmail = person.entity.emails[0].email;
-          }
-        }
-      }
-      
-      // Check if membership is active
-      const status = membership.status || [];
-      const isActive = status.includes('Active');
-      
-      // Get person ID from the member array
-      const personId = membership.member && membership.member.length > 0 ? membership.member[0] : null;
-      
+    if (result && result.entity) {
       return {
         statusCode: 200,
         headers: {
@@ -89,30 +56,15 @@ exports.handler = async (event) => {
           'Access-Control-Allow-Origin': '*'
         },
         body: JSON.stringify({
-          member: {
-            name: memberName,
-            email: memberEmail,
-            membershipNumber: membership.member_number,
-            active: isActive,
-            personId: personId
-          }
+          success: true,
+          activityId: result.entity.id
         })
       };
     } else {
-      return {
-        statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          error: 'Member not found',
-          member: null
-        })
-      };
+      throw new Error('Failed to create activity record');
     }
   } catch (error) {
-    console.error('Error checking membership:', error);
+    console.error('Error logging visit:', error);
     return {
       statusCode: 500,
       headers: {
@@ -120,7 +72,7 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Origin': '*'
       },
       body: JSON.stringify({
-        error: 'Failed to check membership: ' + error.message
+        error: 'Failed to log visit: ' + error.message
       })
     };
   }
@@ -183,3 +135,4 @@ function makeBeaconRequest(url, method = 'GET', body = null) {
     req.end();
   });
 }
+
