@@ -116,6 +116,9 @@ function makeBeaconRequest(url) {
       });
 
       res.on('end', () => {
+        console.log('API Response Status:', res.statusCode);
+        console.log('API Response Data:', data);
+        
         try {
           const parsed = JSON.parse(data);
           if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -124,7 +127,8 @@ function makeBeaconRequest(url) {
             reject(new Error(`API returned status ${res.statusCode}: ${data}`));
           }
         } catch (e) {
-          reject(new Error('Failed to parse API response'));
+          console.error('Parse error. Raw response:', data);
+          reject(new Error(`Failed to parse API response. Status: ${res.statusCode}, Data: ${data.substring(0, 200)}`));
         }
       });
     });
