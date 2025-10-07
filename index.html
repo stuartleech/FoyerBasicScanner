@@ -91,10 +91,17 @@
             transition: all 0.3s;
         }
         
+        .scan-display.focused {
+            border-color: #FF1459;
+            box-shadow: 0 0 0 3px rgba(255, 20, 89, 0.2);
+            background: #fff;
+        }
+        
         .scan-display.active {
             border-color: #FF1459;
             background: #fffbfc;
             color: #000;
+            box-shadow: 0 0 0 3px rgba(255, 20, 89, 0.2);
         }
         
         .status {
@@ -229,9 +236,11 @@
                 clearTimeout(scanTimeout);
             }
 
-            // Handle Tab (often scanner prefix) - just ignore it
+            // Handle Tab (often scanner prefix) - focus and continue
             if (e.key === 'Tab') {
                 e.preventDefault();
+                console.log('Tab key detected - focusing input');
+                forceFocus();
                 refocusInput();
                 return;
             }
@@ -266,6 +275,7 @@
             if (e.key.length === 1) {
                 // Add to buffer
                 scanBuffer += e.key;
+                console.log('Captured character:', e.key, '| Buffer:', scanBuffer);
                 
                 // Update visual display
                 scanDisplay.textContent = scanBuffer || 'Scanning...';
@@ -277,6 +287,7 @@
                 
                 // Clear buffer after 100ms of no input (in case of manual typing)
                 scanTimeout = setTimeout(() => {
+                    console.log('Buffer timeout - clearing');
                     scanBuffer = '';
                     scanDisplay.textContent = 'Ready to scan...';
                     scanDisplay.classList.remove('active');
@@ -366,11 +377,26 @@
         function forceFocus() {
             scanInput.focus();
             scanInput.click();
+            // Show pink outline when focused
+            scanDisplay.classList.add('focused');
             // On iOS Safari, sometimes we need to force selection
             setTimeout(() => {
                 scanInput.setSelectionRange(0, scanInput.value.length);
             }, 10);
         }
+        
+        // Monitor focus state and update visual display
+        scanInput.addEventListener('focus', () => {
+            scanDisplay.classList.add('focused');
+            console.log('Input focused!');
+        });
+        
+        scanInput.addEventListener('blur', () => {
+            if (!scanBuffer) {
+                scanDisplay.classList.remove('focused');
+            }
+            console.log('Input blurred');
+        });
         
         // Multiple event listeners for maximum compatibility
         container.addEventListener('click', forceFocus);
@@ -401,14 +427,23 @@
         });
         
         // Auto-refresh mechanism to trigger focus (works on initial load)
-        const hasRefreshed = sessionStorage.getItem('hasRefreshed');
-        if (!hasRefreshed) {
-            sessionStorage.setItem('hasRefreshed', 'true');
-            // Refresh after a brief moment to allow page to register
+        // Use a timestamp to detect if this is a fresh load or a refresh
+        const lastLoadTime = localStorage.getItem('lastLoadTime');
+        const currentTime = Date.now();
+        
+        console.log('Page load detected');
+        
+        // If no last load time, or last load was more than 5 seconds ago, do a refresh
+        if (!lastLoadTime || (currentTime - parseInt(lastLoadTime)) > 5000) {
+            console.log('First load - will auto-refresh');
+            localStorage.setItem('lastLoadTime', currentTime.toString());
+            // Refresh after a brief moment
             setTimeout(() => {
+                console.log('Auto-refreshing now...');
                 window.location.reload();
-            }, 100);
+            }, 200);
         } else {
+            console.log('Post-refresh load - attempting focus');
             // On the refreshed load, aggressively focus
             forceFocus();
             refocusInput();
@@ -419,6 +454,8 @@
             setTimeout(forceFocus, 200);
             setTimeout(forceFocus, 500);
             setTimeout(forceFocus, 1000);
+            
+            console.log('Focus attempts scheduled');
         }
         
         // Listen for any user interaction (tap/touch anywhere) and immediately focus
