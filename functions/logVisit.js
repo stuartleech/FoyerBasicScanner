@@ -37,12 +37,12 @@ exports.handler = async (event) => {
 
     // Create Activity record
     const activityUrl = `https://api.beaconcrm.org/v1/account/${BEACON_ACCOUNT_ID}/entity/activity`;
-    const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const currentDateTime = new Date().toISOString(); // Full ISO timestamp with time
     
     const activityData = {
       type: ['Visit'],
       content: 'Annual pass scanned at FOH',
-      date: currentDate,
+      date: currentDateTime,
       related_entity_ids: [personId]
     };
 
