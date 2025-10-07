@@ -3,7 +3,6 @@ const https = require('https');
 // Beacon CRM API Configuration
 const BEACON_API_KEY = 'c5c7b9ff7cb39fb9443f6059fae930b2353875f4f642803b66ac48528fc0c90cc255bf59f80032ba';
 const BEACON_ACCOUNT_ID = '23039';
-const BEACON_API_BASE = `https://api.beaconcrm.org/v1/accounts/${BEACON_ACCOUNT_ID}`;
 
 exports.handler = async (event) => {
   // Handle CORS for preflight requests
@@ -36,18 +35,45 @@ exports.handler = async (event) => {
       };
     }
 
-    // Try to lookup the member by membership number first
-    // Beacon API endpoint: GET /people?search=membershipNumber
-    const searchUrl = `${BEACON_API_BASE}/people?search=${encodeURIComponent(scannedData)}`;
-    
-    const memberData = await makeBeaconRequest(searchUrl);
+    // Filter memberships by member_number
+    const filterUrl = `https://api.beaconcrm.org/v1/account/${BEACON_ACCOUNT_ID}/entities/membership/filter`;
+    const filterBody = {
+      filter_conditions: [
+        {
+          field: "member_number",
+          operator: "==",
+          value: parseInt(scannedData) || scannedData
+        }
+      ]
+    };
 
-    // Check if we found a member
-    if (memberData && memberData.data && memberData.data.length > 0) {
-      const person = memberData.data[0];
+    const membershipData = await makeBeaconRequest(filterUrl, 'POST', filterBody);
+
+    // Check if we found a membership
+    if (membershipData && membershipData.entities && membershipData.entities.length > 0) {
+      const membership = membershipData.entities[0];
       
-      // Check for active membership
-      const hasActiveMembership = await checkActiveMembership(person.id);
+      // Extract member info from the membership
+      let memberName = 'N/A';
+      let memberEmail = 'N/A';
+      
+      // Check if there are references (member details)
+      if (membershipData.references && membershipData.references.length > 0) {
+        const person = membershipData.references.find(ref => ref.entity_type === 'person');
+        if (person && person.entity) {
+          const nameObj = person.entity.name;
+          if (nameObj) {
+            memberName = nameObj.full || `${nameObj.first || ''} ${nameObj.last || ''}`.trim();
+          }
+          if (person.entity.emails && person.entity.emails.length > 0) {
+            memberEmail = person.entity.emails[0].email;
+          }
+        }
+      }
+      
+      // Check if membership is active
+      const status = membership.entity.status || [];
+      const isActive = status.includes('Active');
       
       return {
         statusCode: 200,
@@ -57,10 +83,10 @@ exports.handler = async (event) => {
         },
         body: JSON.stringify({
           member: {
-            name: `${person.firstname || ''} ${person.lastname || ''}`.trim(),
-            email: person.email || 'N/A',
-            membershipNumber: scannedData,
-            active: hasActiveMembership
+            name: memberName,
+            email: memberEmail,
+            membershipNumber: membership.entity.member_number,
+            active: isActive
           }
         })
       };
@@ -93,20 +119,25 @@ exports.handler = async (event) => {
 };
 
 // Helper function to make requests to Beacon API
-function makeBeaconRequest(url) {
+function makeBeaconRequest(url, method = 'GET', body = null) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
+    const bodyString = body ? JSON.stringify(body) : null;
     
     const options = {
       hostname: urlObj.hostname,
       path: urlObj.pathname + urlObj.search,
-      method: 'GET',
+      method: method,
       headers: {
         'Authorization': `Bearer ${BEACON_API_KEY}`,
         'Content-Type': 'application/json',
         'Beacon-Application': 'developer_api'
       }
     };
+
+    if (bodyString) {
+      options.headers['Content-Length'] = Buffer.byteLength(bodyString);
+    }
 
     const req = https.request(options, (res) => {
       let data = '';
@@ -137,31 +168,10 @@ function makeBeaconRequest(url) {
       reject(error);
     });
 
+    if (bodyString) {
+      req.write(bodyString);
+    }
+
     req.end();
   });
 }
-
-// Helper function to check if person has active membership
-async function checkActiveMembership(personId) {
-  try {
-    // Get person's memberships
-    const membershipsUrl = `${BEACON_API_BASE}/people/${personId}/memberships`;
-    const membershipsData = await makeBeaconRequest(membershipsUrl);
-    
-    if (membershipsData && membershipsData.data && membershipsData.data.length > 0) {
-      // Check if any membership is currently active
-      const now = new Date();
-      return membershipsData.data.some(membership => {
-        const expiryDate = membership.expiry_date ? new Date(membership.expiry_date) : null;
-        return !expiryDate || expiryDate > now;
-      });
-    }
-    
-    return false;
-  } catch (error) {
-    console.error('Error checking memberships:', error);
-    // If we can't check memberships, assume inactive
-    return false;
-  }
-}
-
