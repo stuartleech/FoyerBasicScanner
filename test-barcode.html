@@ -114,11 +114,13 @@
 
     <script>
         // Generate the barcode for membership ID 2079
-        JsBarcode("#barcode", "2079", {
+        // Note: Including TAB character (ASCII 9) before the number
+        // This helps auto-focus the input field when scanned
+        JsBarcode("#barcode", "\t2079", {
             format: "CODE128",
             width: 3,
             height: 100,
-            displayValue: true,
+            displayValue: false, // Hide display since TAB isn't visible
             fontSize: 20,
             margin: 10
         });

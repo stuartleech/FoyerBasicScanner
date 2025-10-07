@@ -198,11 +198,21 @@
             setTimeout(attemptFocus, 200);
         }
 
-        // Listen for Tab key anywhere on the page (for scanner prefix)
+        // Capture ALL keyboard input and redirect to the input field
+        // This is crucial for Shopify POS browser where focus doesn't work reliably
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Tab' && document.activeElement !== scanInput) {
-                e.preventDefault();
-                refocusInput();
+            // If input is not focused and user types anything, focus it
+            if (document.activeElement !== scanInput) {
+                // For Tab key, just focus without adding the character
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    refocusInput();
+                }
+                // For any printable character or number, focus and let it type
+                else if (e.key.length === 1 || e.key === 'Enter') {
+                    scanInput.focus();
+                    // Don't prevent default - let the character go through to the now-focused input
+                }
             }
         });
         
