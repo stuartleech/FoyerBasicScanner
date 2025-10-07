@@ -31,6 +31,17 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             max-width: 500px;
             width: 100%;
+            cursor: pointer;
+        }
+        
+        .tap-hint {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
         }
         
         .logo-section {
@@ -66,17 +77,21 @@
         
         #scanInput {
             width: 100%;
-            padding: 15px;
-            font-size: 18px;
-            border: 2px solid #e0e0e0;
+            padding: 20px;
+            font-size: 24px;
+            border: 3px solid #FF1459;
             border-radius: 10px;
-            transition: border-color 0.3s;
+            transition: all 0.3s;
+            text-align: center;
+            font-weight: 600;
+            background: #fff;
         }
         
         #scanInput:focus {
             outline: none;
             border-color: #FF1459;
-            box-shadow: 0 0 0 3px rgba(255, 20, 89, 0.1);
+            box-shadow: 0 0 0 4px rgba(255, 20, 89, 0.2);
+            background: #fffbfc;
         }
         
         .status {
@@ -159,15 +174,19 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="mainContainer">
         <div class="logo-section">
             <img src="Assets/Foyer-Logo-Pink-Straight.png" alt="Foyer" class="logo">
             <h1>Scanner</h1>
         </div>
         
+        <div class="tap-hint">
+            👆 Tap anywhere on this screen before scanning
+        </div>
+        
         <div class="scan-section">
             <label for="scanInput">Scan Membership Barcode/QR Code:</label>
-            <input type="text" id="scanInput" autofocus placeholder="Ready to scan...">
+            <input type="text" id="scanInput" autofocus placeholder="Tap here then scan..." inputmode="none">
         </div>
         
         <div id="status" class="status"></div>
@@ -333,29 +352,51 @@
             }
         }
 
-        // Keep focus on input at all times
-        document.addEventListener('click', () => {
-            if (document.activeElement !== scanInput) {
-                refocusInput();
-            }
+        // Make entire container clickable to focus input (crucial for iPad/Safari)
+        const container = document.getElementById('mainContainer');
+        
+        function forceFocus() {
+            scanInput.focus();
+            scanInput.click();
+            // On iOS Safari, sometimes we need to force selection
+            setTimeout(() => {
+                scanInput.setSelectionRange(0, scanInput.value.length);
+            }, 10);
+        }
+        
+        // Multiple event listeners for maximum compatibility
+        container.addEventListener('click', forceFocus);
+        container.addEventListener('touchstart', forceFocus);
+        container.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            forceFocus();
         });
         
-        window.addEventListener('load', refocusInput);
+        document.addEventListener('click', forceFocus);
+        document.addEventListener('touchstart', forceFocus);
+        
+        window.addEventListener('load', () => {
+            forceFocus();
+            refocusInput();
+        });
         
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
+                forceFocus();
                 refocusInput();
             }
         });
         
         // Refocus if input loses focus
         scanInput.addEventListener('blur', () => {
-            refocusInput();
+            setTimeout(forceFocus, 10);
         });
         
-        // Initial focus on page load - do it immediately AND with delay
-        scanInput.focus();
-        scanInput.click();
+        // Initial focus on page load - aggressive approach for iPad
+        setTimeout(forceFocus, 100);
+        setTimeout(forceFocus, 300);
+        setTimeout(forceFocus, 500);
+        forceFocus();
         refocusInput();
     </script>
 </body>
