@@ -193,7 +193,7 @@
         
         <div class="scan-section">
             <label for="scanInput">Scan Membership Barcode/QR Code:</label>
-            <input type="text" id="scanInput" autofocus placeholder="Ready to scan...">
+            <input type="text" id="scanInput" placeholder="Ready to scan..." inputmode="none">
         </div>
         
         <div id="status" class="status"></div>
@@ -428,9 +428,33 @@
             // Success and loading messages stay visible
         }
 
-        // Keep input focused
-        document.addEventListener('click', () => scanInput.focus());
-        scanInput.focus();
+        // Detect if we're on a mobile device
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // Enable keyboard when user taps the field (for manual entry)
+        scanInput.addEventListener('touchstart', () => {
+            scanInput.inputmode = 'numeric';
+        });
+        
+        scanInput.addEventListener('focus', () => {
+            // On mobile, only show keyboard if user explicitly tapped
+            if (isMobile) {
+                scanInput.inputmode = 'numeric';
+            }
+        });
+        
+        scanInput.addEventListener('blur', () => {
+            // Hide keyboard after losing focus
+            if (isMobile) {
+                scanInput.inputmode = 'none';
+            }
+        });
+        
+        // Auto-focus on desktop, but not on mobile (to prevent keyboard popup)
+        if (!isMobile) {
+            scanInput.focus();
+            document.addEventListener('click', () => scanInput.focus());
+        }
     </script>
 </body>
 </html>
