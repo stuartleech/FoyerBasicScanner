@@ -431,22 +431,42 @@
         // Detect if we're on a mobile device
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
+        // Track if user has manually interacted with the field
+        let userTapped = false;
+        
         // Enable keyboard when user taps the field (for manual entry)
         scanInput.addEventListener('touchstart', () => {
-            scanInput.inputmode = 'numeric';
+            userTapped = true;
+            // Remove inputmode to allow keyboard
+            scanInput.removeAttribute('inputmode');
+            // Force focus to trigger keyboard
+            setTimeout(() => {
+                scanInput.focus();
+            }, 10);
+        });
+        
+        scanInput.addEventListener('click', () => {
+            if (isMobile) {
+                userTapped = true;
+                scanInput.removeAttribute('inputmode');
+            }
         });
         
         scanInput.addEventListener('focus', () => {
             // On mobile, only show keyboard if user explicitly tapped
-            if (isMobile) {
-                scanInput.inputmode = 'numeric';
+            if (isMobile && userTapped) {
+                scanInput.removeAttribute('inputmode');
+            } else if (isMobile && !userTapped) {
+                // If focus happened without user tap (e.g., auto-focus), keep keyboard hidden
+                scanInput.setAttribute('inputmode', 'none');
             }
         });
         
         scanInput.addEventListener('blur', () => {
-            // Hide keyboard after losing focus
+            // Reset for next time
             if (isMobile) {
-                scanInput.inputmode = 'none';
+                userTapped = false;
+                scanInput.setAttribute('inputmode', 'none');
             }
         });
         
