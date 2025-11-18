@@ -18,20 +18,38 @@
             font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #FF1459 0%, #A71459 100%);
             min-height: 100vh;
+            min-height: -webkit-fill-available; /* iOS Safari fix */
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            padding-bottom: max(20px, env(safe-area-inset-bottom)); /* Account for iOS safe area */
+            position: fixed;
+            width: 100%;
+            overflow-y: auto;
         }
         
         .container {
             background: white;
             border-radius: 20px;
             padding: 40px;
+            padding-bottom: max(40px, env(safe-area-inset-bottom) + 20px);
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             max-width: 500px;
             width: 100%;
             cursor: pointer;
+            margin: auto;
+            position: relative;
+        }
+        
+        /* Prevent layout shift when keyboard appears */
+        @supports (-webkit-touch-callout: none) {
+            /* iOS specific */
+            body {
+                position: fixed;
+                height: 100vh;
+                height: -webkit-fill-available;
+            }
         }
         
         
