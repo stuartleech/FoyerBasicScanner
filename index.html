@@ -460,6 +460,10 @@
             // Force focus to trigger keyboard
             setTimeout(() => {
                 scanInput.focus();
+                // Scroll input into view when keyboard appears
+                setTimeout(() => {
+                    scanInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
             }, 10);
         });
         
@@ -474,6 +478,10 @@
             // On mobile, only show keyboard if user explicitly tapped
             if (isMobile && userTapped) {
                 scanInput.removeAttribute('inputmode');
+                // Scroll input into view when keyboard appears
+                setTimeout(() => {
+                    scanInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
             } else if (isMobile && !userTapped) {
                 // If focus happened without user tap (e.g., auto-focus), keep keyboard hidden
                 scanInput.setAttribute('inputmode', 'none');
