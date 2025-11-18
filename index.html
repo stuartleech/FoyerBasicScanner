@@ -182,30 +182,6 @@
             background: #ccc;
             cursor: not-allowed;
         }
-        
-        .manual-input-btn {
-            margin-top: 10px;
-            padding: 10px 15px;
-            background: #f8f9fa;
-            color: #666;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .manual-input-btn:hover {
-            background: #e9ecef;
-            border-color: #adb5bd;
-        }
-        
-        .manual-input-btn.active {
-            background: #FF1459;
-            color: white;
-            border-color: #FF1459;
-        }
     </style>
 </head>
 <body>
@@ -217,8 +193,7 @@
         
         <div class="scan-section">
             <label for="scanInput">Scan Membership Barcode/QR Code:</label>
-            <input type="text" id="scanInput" autofocus placeholder="Ready to scan..." inputmode="none">
-            <button class="manual-input-btn" id="manualInputBtn" onclick="toggleManualInput()">Enable Manual Input</button>
+            <input type="text" id="scanInput" autofocus placeholder="Ready to scan...">
         </div>
         
         <div id="status" class="status"></div>
@@ -451,26 +426,6 @@
                 }, 3000);
             }
             // Success and loading messages stay visible
-        }
-
-        // Toggle manual input mode
-        let manualInputEnabled = false;
-        
-        function toggleManualInput() {
-            manualInputEnabled = !manualInputEnabled;
-            const btn = document.getElementById('manualInputBtn');
-            
-            if (manualInputEnabled) {
-                scanInput.inputmode = 'numeric';
-                btn.textContent = 'Disable Manual Input';
-                btn.classList.add('active');
-                scanInput.focus();
-            } else {
-                scanInput.inputmode = 'none';
-                btn.textContent = 'Enable Manual Input';
-                btn.classList.remove('active');
-                scanInput.focus();
-            }
         }
 
         // Keep input focused
