@@ -1,8 +1,8 @@
 const https = require('https');
 
 // Beacon CRM API Configuration
-const BEACON_API_KEY = 'c5c7b9ff7cb39fb9443f6059fae930b2353875f4f642803b66ac48528fc0c90cc255bf59f80032ba';
-const BEACON_ACCOUNT_ID = '23039';
+const BEACON_API_KEY = process.env.BEACON_API_KEY;
+const BEACON_ACCOUNT_ID = process.env.BEACON_ACCOUNT_ID || '23039';
 
 exports.handler = async (event) => {
   // Handle CORS for preflight requests
